@@ -2,10 +2,12 @@
 STAMPDIR=tgz2build/stamps
 
 CONFIGURE_OPTS := --prefix $(ZBS_PREFIX) --shared
-
+CONFIGURE_CMD = ./configure
 ifneq (,$(findstring solaris,$(ZBS_DIST)))
-# Under solaris we need this switch to be able to use iconv.
-  CONFIGURE_OPTS +=
+  CONFIGURE_CMD= CC="gcc -fPIC" LDSHARED="gcc -shared" ./configure
+  ifneq (,$(findstring amd64,$(ZBS_ARCH)))
+  CONFIGURE_CMD= CC="gcc -fPIC -m64"  LDSHARED="gcc -shared -m64" ./configure
+  endif
 endif
 
 ifneq (,$(findstring hpux,$(ZBS_DIST)))
@@ -29,7 +31,7 @@ $(STAMPDIR)/stamp-setup:
 	touch $@
 
 configure: $(STAMPDIR)/stamp-configure
-	./configure $(CONFIGURE_OPTS)
+	$(CONFIGURE_CMD) $(CONFIGURE_OPTS)
 	touch $@
 
 $(STAMPDIR)/stamp-configure: setup
