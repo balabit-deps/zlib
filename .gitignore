@@ -13,3 +13,5 @@ aclocal.m4
 ltmain.sh
 autom4te.cache
 gtk-doc.make
+typescript
+*.new
