@@ -3,34 +3,18 @@ STAMPDIR=tgz2build/stamps
 
 CONFIGURE_OPTS := --prefix $(ZBS_PREFIX) --shared
 CONFIGURE_CMD = ./configure
-ifneq (,$(findstring solaris,$(ZBS_DIST)))
-  CONFIGURE_CMD= CC="gcc -fPIC" LDSHARED="gcc -shared" ./configure
-  ifneq (,$(findstring amd64,$(ZBS_ARCH)))
-  CONFIGURE_CMD= CC="gcc -fPIC -m64"  LDSHARED="gcc -shared -m64" ./configure
-  endif
-endif
-
-ifneq (,$(findstring hpux,$(ZBS_DIST)))
-# Under hpux we need this switch to be able to use iconv.
-  CONFIGURE_OPTS +=
-endif
-
-ifneq (,$(findstring aix,$(ZBS_DIST)))
-# Under hpux we need this switch to be able to use iconv.
-  CONFIGURE_OPTS +=
-endif
-
 
 all: binary
 
-binary: setup configure build install
+binary: clean setup configure build install
 
 setup:  $(STAMPDIR)/stamp-setup
 $(STAMPDIR)/stamp-setup:
-	mkdir tgz2build/stamps || true
+	mkdir -p tgz2build/stamps 
 	touch $@
 
 configure: $(STAMPDIR)/stamp-configure
+	unset CFLAGS; \
 	$(CONFIGURE_CMD) $(CONFIGURE_OPTS)
 	touch $@
 
@@ -39,13 +23,25 @@ $(STAMPDIR)/stamp-configure: setup
 build:  $(STAMPDIR)/stamp-build
 $(STAMPDIR)/stamp-build: configure
 	$(MAKE)
+	if echo $(ZBS_DIST) | grep '^aix' >/dev/null 2>&1;then \
+		rm -f libz.so.1; \
+		cp libz.so.1.2.3 libz.so.1; \
+		/usr/bin/ar -q libz.a libz.so.1; \
+		rm -f libz.so.1; \
+		ln -s libz.so.1.2.3 libz.so.1; \
+	fi
+
 	touch $@
+
 install: $(STAMPDIR)/stamp-install
 $(STAMPDIR)/stamp-install: build
 	rm -rf $(ZBS_STAGE_DIR) || true
-	$(MAKE) install libdir=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/lib includedir=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/include
-
+	$(MAKE) install prefix=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX) libdir=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/lib includedir=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/include
+	if echo $(ZBS_DIST) | grep '^aix' >/dev/null 2>&1;then \
+		install -m644 libz.a $(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/lib; \
+	fi
 	touch $@
+
 clean:
 	rm -rf tgz2build/stamps || true
 	rm -rf tgz2build/staging || true
