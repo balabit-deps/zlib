@@ -1,2 +1,2 @@
 opt/syslog-ng/include/*
-opt/syslog-ng/lib/*.s[o,l]
+opt/syslog-ng/lib/*.so

@@ -1,3 +1,9 @@
+zlib (1.2.3-3.syslog-ng30) syslogng30; urgency=low
+
+  * Fixed HPUX packaging. libz.sl symlink moved to zlib package.
+
+ -- Tamas Pal <folti@balabit.com>  Wed, 01 Oct 2008 14:09:02 +0200
+
 zlib (1.2.3-2.syslog-ng30) syslogng30; urgency=low
 
   * Fixed configure script and packaging.
