@@ -23,7 +23,8 @@ LDFLAGS="-L. ${LIBS}"
 VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < zlib.h`
 VER2=`sed -n -e '/VERSION "/s/.*"\([0-9]*\\.[0-9]*\)\\..*/\1/p' < zlib.h`
 VER1=`sed -n -e '/VERSION "/s/.*"\([0-9]*\)\\..*/\1/p' < zlib.h`
-AR=${AR-"ar rc"}
+AR=${AR-"ar"}
+AR_RC="${AR} rc"
 RANLIB=${RANLIB-"ranlib"}
 prefix=${prefix-/usr/local}
 exec_prefix=${exec_prefix-'${prefix}'}
@@ -31,7 +32,8 @@ libdir=${libdir-'${exec_prefix}/lib'}
 includedir=${includedir-'${prefix}/include'}
 mandir=${mandir-'${prefix}/share/man'}
 shared_ext='.so'
-shared=0
+shared=1
+zprefix=0
 gcc=0
 old_cc="$CC"
 old_cflags="$CFLAGS"
@@ -39,20 +41,25 @@ old_cflags="$CFLAGS"
 while test $# -ge 1
 do
 case "$1" in
-    -h* | --h*)
+    -h* | --help)
       echo 'usage:'
       echo '  configure [--shared] [--prefix=PREFIX]  [--exec_prefix=EXPREFIX]'
-      echo '     [--libdir=LIBDIR] [--includedir=INCLUDEDIR]'
+      echo '     [--libdir=LIBDIR] [--includedir=INCLUDEDIR] [--zprefix]'
         exit 0;;
-    -p*=* | --p*=*) prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
-    -e*=* | --e*=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
+    -p*=* | --prefix=*) prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
+    -e*=* | --eprefix=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -l*=* | --libdir=*) libdir=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -i*=* | --includedir=*) includedir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
-    -p* | --p*) prefix="$2"; shift; shift;;
-    -e* | --e*) exec_prefix="$2"; shift; shift;;
-    -l* | --l*) libdir="$2"; shift; shift;;
-    -i* | --i*) includedir="$2"; shift; shift;;
-    -s* | --s*) shared=1; shift;;
+    -u*=* | --uname=*) uname=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
+    -p* | --prefix) prefix="$2"; shift; shift;;
+    -e* | --eprefix) exec_prefix="$2"; shift; shift;;
+    -l* | --libdir) libdir="$2"; shift; shift;;
+    -i* | --includedir) includedir="$2"; shift; shift;;
+    -s* | --shared | --enable-shared) shared=1; shift;;
+    -t | --static) shared=0; shift;;
+    -z* | --zprefix) zprefix=1; shift;;
+    --sysconfdir=*) echo "ignored option: --sysconfdir"; shift;;
+    --localstatedir=*) echo "ignored option: --localstatedir"; shift;;
     *) echo "unknown option: $1"; echo "$0 --help for help"; exit 1;;
     esac
 done
@@ -74,14 +81,17 @@ esac
 if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
   CC="$cc"
   # All code is PIC on AIX.
-  case `(uname -s || echo unknown) 2>/dev/null` in
+  if test -z $uname; then
+    uname=`(uname -s || echo unknown) 2>/dev/null`
+  fi
+  case "$uname" in
   AIX*) SFLAGS=${CFLAGS-"-O3"}
         SHAREDLIB='libz.so';;
-  *)    SFLAGS=${CFLAGS-"-fPIC -O3"};;
+  *)    SFLAGS="${CFLAGS-"O3"} -fPIC";;
   esac
-  CFLAGS="$cflags"
-  case `(uname -s || echo unknown) 2>/dev/null` in
-  Linux | linux | GNU | GNU/*) LDSHARED=${LDSHARED-"$cc -shared -Wl,-soname,libz.so.1"};;
+  CFLAGS="${CFLAGS-"-O3"}"
+  case "$uname" in
+  Linux | linux | GNU | GNU/*) LDSHARED=${LDSHARED-"$cc -shared -Wl,-soname,libz.so.1,--version-script,zlib.map"};;
   CYGWIN* | Cygwin* | cygwin* | OS/2* )
              EXE='.exe';;
   QNX*)  # This is for QNX6. I suppose that the QNX rule below is for QNX2,QNX4
@@ -107,10 +117,13 @@ if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
 else
   # find system name and corresponding cc options
   CC=${CC-cc}
-  case `(uname -sr || echo unknown) 2>/dev/null` in
+  if test -z $uname; then
+    uname=`(uname -sr || echo unknown) 2>/dev/null`
+  fi
+  case "$uname" in
   AIX*)      SFLAGS=${CFLAGS-"-O3"}
              case `(uname -m) 2>/dev/null` in
-           ia64) if test "$gcc" -eq 1; then
+             ia64) if test "$gcc" -eq 1; then
                     LDSHARED=${LDSHARED-"$CC -shared  -Wl,-h,libz.so.1"}
                  else
                     LDSHARED=${LDSHARED-"$CC -G -Wl,-h,libz.so.1"}
@@ -132,18 +145,18 @@ else
          esac;;
   IRIX*)     SFLAGS=${CFLAGS-"-ansi -O2 -rpath ."}
              CFLAGS=${CFLAGS-"-ansi -O2"}
-             LDSHARED=${LDSHARED-"cc -shared"};;
+             LDSHARED=${LDSHARED-"cc -shared -Wl,-soname,libz.so.1"};;
   OSF1\ V4*) SFLAGS=${CFLAGS-"-O -std1"}
              CFLAGS=${CFLAGS-"-O -std1"}
              LDSHARED=${LDSHARED-"cc -shared  -Wl,-soname,libz.so -Wl,-msym -Wl,-rpath,$(libdir) -Wl,-set_version,${VER}:1.0"};;
   OSF1*)     SFLAGS=${CFLAGS-"-O -std1"}
              CFLAGS=${CFLAGS-"-O -std1"}
-             LDSHARED=${LDSHARED-"cc -shared"};;
+             LDSHARED=${LDSHARED-"cc -shared -Wl,-soname,libz.so.1"};;
   QNX*)      SFLAGS=${CFLAGS-"-4 -O"}
              CFLAGS=${CFLAGS-"-4 -O"}
              LDSHARED=${LDSHARED-"cc"}
              RANLIB=${RANLIB-"true"}
-             AR="cc -A";;
+             AR_RC="cc -A";;
   SCO_SV\ 3.2*) SFLAGS=${CFLAGS-"-O3 -dy -KPIC "}
              CFLAGS=${CFLAGS-"-O3"}
              LDSHARED=${LDSHARED-"cc -dy -KPIC -G"};;
@@ -194,22 +207,63 @@ if test $shared -eq 1; then
   # we must test in two steps (cc then ld), required at least on SunOS 4.x
   if test "`($CC -c $SFLAGS $test.c) 2>&1`" = "" &&
      test "`($LDSHARED -o $test$shared_ext $test.o) 2>&1`" = ""; then
-    CFLAGS="$SFLAGS"
-    LIBS="$SHAREDLIBV"
+    LIBS="$LIBS $SHAREDLIBV"
     echo Building shared library $SHAREDLIBV with $CC.
   elif test -z "$old_cc" -a -z "$old_cflags"; then
     echo No shared library support.
     shared=0;
   else
+    echo Tested $CC -c $SFLAGS $test.c
+    $CC -c $SFLAGS $test.c
+    echo Tested $LDSHARED -o $test$shared_ext $test.o
+    $LDSHARED -o $test$shared_ext $test.o
     echo 'No shared library support; try without defining CC and CFLAGS'
     shared=0;
   fi
 fi
 if test $shared -eq 0; then
   LDSHARED="$CC"
+  ALL="allstatic"
+  TEST="teststatic"
   echo Building static library $LIBS version $VER with $CC.
 else
-  LDFLAGS="-L. ${SHAREDLIBV}"
+  ALL="allstatic allshared"
+  TEST="teststatic testshared"
+fi
+
+cat > zlibdefs.h << EOF
+/* zlibdefs.h -- compile-time definitions for the zlib compression library
+ * Copyright (C) 1995-2006 Jean-loup Gailly.
+ * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+
+EOF
+
+cat > $test.c <<EOF
+#include <sys/types.h>
+off64_t dummy = 0;
+EOF
+if test "`($CC -c $CFLAGS -D_LARGEFILE64_SOURCE=1 $test.c) 2>&1`" = ""; then
+  CFLAGS="${CFLAGS} -D_LARGEFILE64_SOURCE=1"
+  SFLAGS="${SFLAGS} -D_LARGEFILE64_SOURCE=1"
+  echo "Checking for off64_t... Yes."
+  echo "Checking for fseeko... Yes."
+else
+  echo "Checking for off64_t... No."
+  cat > $test.c <<EOF
+#include <stdio.h>
+int main(void) {
+  fseeko(NULL, 0, 0);
+  return 0;
+}
+EOF
+  if test "`($CC $CFLAGS -o $test $test.c) 2>&1`" = ""; then
+    echo "Checking for fseeko... Yes."
+  else
+    CFLAGS="${CFLAGS} -DNO_FSEEKO"
+    SFLAGS="${SFLAGS} -DNO_FSEEKO"
+    echo "Checking for fseeko... No."
+  fi
 fi
 
 cat > $test.c <<EOF
@@ -217,11 +271,25 @@ cat > $test.c <<EOF
 int main() { return 0; }
 EOF
 if test "`($CC -c $CFLAGS $test.c) 2>&1`" = ""; then
-  sed < zconf.in.h "/HAVE_UNISTD_H/s%0%1%" > zconf.h
+  cat >> zlibdefs.h <<EOF
+#include <sys/types.h>	/* for off_t */
+#include <unistd.h>	/* for SEEK_* and off_t */
+#ifdef VMS
+#  include <unixio.h>	/* for off_t */
+#endif
+#ifndef z_off_t
+#  define z_off_t off_t
+#endif
+EOF
   echo "Checking for unistd.h... Yes."
 else
-  cp -p zconf.in.h zconf.h
   echo "Checking for unistd.h... No."
+fi
+
+if test $zprefix -eq 1; then
+  sed < zconf.h "/#ifdef Z_PREFIX/s/def Z_PREFIX/ 1/" > zconf.temp.h
+  mv zconf.temp.h zconf.h
+  echo "Using z_ prefix on all symbols."
 fi
 
 cat > $test.c <<EOF
@@ -240,7 +308,7 @@ int main()
 EOF
 
 if test "`($CC -c $CFLAGS $test.c) 2>&1`" = ""; then
-  echo "Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf()"
+  echo "Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf()."
 
   cat > $test.c <<EOF
 #include <stdio.h>
@@ -337,7 +405,7 @@ EOF
     fi
   fi
 else
-  echo "Checking whether to use vs[n]printf() or s[n]printf()... using s[n]printf()"
+  echo "Checking whether to use vs[n]printf() or s[n]printf()... using s[n]printf()."
 
   cat >$test.c <<EOF
 #include <stdio.h>
@@ -462,13 +530,36 @@ rm -f $test.[co] $test $test$shared_ext
 sed < Makefile.in "
 /^CC *=/s#=.*#=$CC#
 /^CFLAGS *=/s#=.*#=$CFLAGS#
+/^SFLAGS *=/s#=.*#=$SFLAGS#
+/^LDFLAGS *=/s#=.*#=$LDFLAGS#
+/^LDSHARED *=/s#=.*#=$LDSHARED#
+/^CPP *=/s#=.*#=$CPP#
+/^LIBS *=/s#=.*#=$LIBS#
+/^SHAREDLIB *=/s#=.*#=$SHAREDLIB#
+/^SHAREDLIBV *=/s#=.*#=$SHAREDLIBV#
+/^SHAREDLIBM *=/s#=.*#=$SHAREDLIBM#
+/^AR *=/s#=.*#=$AR_RC#
+/^RANLIB *=/s#=.*#=$RANLIB#
+/^EXE *=/s#=.*#=$EXE#
+/^prefix *=/s#=.*#=$prefix#
+/^exec_prefix *=/s#=.*#=$exec_prefix#
+/^libdir *=/s#=.*#=$libdir#
+/^includedir *=/s#=.*#=$includedir#
+/^mandir *=/s#=.*#=$mandir#
+/^all: */s#:.*#: $ALL#
+/^test: */s#:.*#: $TEST#
+" > Makefile
+
+sed < zlib.pc.in "
+/^CC *=/s#=.*#=$CC#
+/^CFLAGS *=/s#=.*#=$CFLAGS#
 /^CPP *=/s#=.*#=$CPP#
 /^LDSHARED *=/s#=.*#=$LDSHARED#
 /^LIBS *=/s#=.*#=$LIBS#
 /^SHAREDLIB *=/s#=.*#=$SHAREDLIB#
 /^SHAREDLIBV *=/s#=.*#=$SHAREDLIBV#
 /^SHAREDLIBM *=/s#=.*#=$SHAREDLIBM#
-/^AR *=/s#=.*#=$AR#
+/^AR *=/s#=.*#=$AR_RC#
 /^RANLIB *=/s#=.*#=$RANLIB#
 /^EXE *=/s#=.*#=$EXE#
 /^prefix *=/s#=.*#=$prefix#
@@ -477,4 +568,6 @@ sed < Makefile.in "
 /^includedir *=/s#=.*#=$includedir#
 /^mandir *=/s#=.*#=$mandir#
 /^LDFLAGS *=/s#=.*#=$LDFLAGS#
-" > Makefile
+" | sed -e "
+s/\@VERSION\@/$VER/g;
+" > zlib.pc

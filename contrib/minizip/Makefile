@@ -1,8 +1,8 @@
 CC=cc
-CFLAGS=-O -I../..
+CFLAGS=$(OPT) -I../.. -Dunix
 
-UNZ_OBJS = miniunz.o unzip.o ioapi.o ../../libz.a
-ZIP_OBJS = minizip.o zip.o   ioapi.o ../../libz.a
+UNZ_OBJS = miniunz.o unzip.o ioapi.o
+ZIP_OBJS = minizip.o zip.o   ioapi.o
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
@@ -10,10 +10,10 @@ ZIP_OBJS = minizip.o zip.o   ioapi.o ../../libz.a
 all: miniunz minizip
 
 miniunz:  $(UNZ_OBJS)
-	$(CC) $(CFLAGS) -o $@ $(UNZ_OBJS)
+	$(CC) $(CFLAGS) -o $@ $(UNZ_OBJS) -L ../.. -lz
 
 minizip:  $(ZIP_OBJS)
-	$(CC) $(CFLAGS) -o $@ $(ZIP_OBJS)
+	$(CC) $(CFLAGS) -o $@ $(ZIP_OBJS) -L ../.. -lz
 
 test:	miniunz minizip
 	./minizip test readme.txt
