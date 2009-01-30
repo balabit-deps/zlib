@@ -1,6 +1,15 @@
 $! make libz under VMS written by
 $! Martin P.J. Zinser
-$! <zinser@zinser.no-ip.info or zinser@sysdev.deutsche-boerse.com>
+$!
+$! In case of problems with the install you might contact me at
+$! zinser@zinser.no-ip.info(preferred) or
+$! zinser@sysdev.deutsche-boerse.com (work)
+$!
+$! Make procedure history for Zlib
+$!
+$!------------------------------------------------------------------------------
+$! Version history
+$! 0.01 20060120 First version to receive a number
 $!
 $ on error then goto err_exit
 $!
@@ -10,7 +19,10 @@ $!
 $ true  = 1
 $ false = 0
 $ tmpnam = "temp_" + f$getjpi("","pid")
-$ SAY = "WRITE SYS$OUTPUT"
+$ its_decc = false
+$ its_vaxc = false
+$ its_gnuc = false
+$ s_case   = False
 $!
 $! Setup variables holding "config" information
 $!
@@ -21,13 +33,11 @@ $ v_string = "ZLIB_VERSION"
 $ v_file   = "zlib.h"
 $ ccopt    = ""
 $ lopts    = ""
+$ dnsrl   = ""
 $ linkonly = false
 $ optfile  = name + ".opt"
-$ its_decc = false
-$ its_vaxc = false
-$ its_gnuc = false
 $ axp      = f$getsyi("HW_MODEL").ge.1024
-$ s_case   = false
+$!
 $! Check for MMK/MMS
 $!
 $ If F$Search ("Sys$System:MMS.EXE") .nes. "" Then Make = "MMS"
@@ -67,47 +77,47 @@ $ if make.eqs.""
 $  then
 $   dele example.obj;*,minigzip.obj;*
 $   CALL MAKE adler32.OBJ "CC ''CCOPT' adler32" -
-                adler32.c zlib.h zconf.h
+                adler32.c zlib.h zconf.h zlibdefs.h
 $   CALL MAKE compress.OBJ "CC ''CCOPT' compress" -
-                compress.c zlib.h zconf.h
+                compress.c zlib.h zconf.h zlibdefs.h
 $   CALL MAKE crc32.OBJ "CC ''CCOPT' crc32" -
-                crc32.c zlib.h zconf.h
+                crc32.c zlib.h zconf.h zlibdefs.h
 $   CALL MAKE deflate.OBJ "CC ''CCOPT' deflate" -
-                deflate.c deflate.h zutil.h zlib.h zconf.h
+                deflate.c deflate.h zutil.h zlib.h zconf.h zlibdefs.h
 $   CALL MAKE gzio.OBJ "CC ''CCOPT' gzio" -
-                gzio.c zutil.h zlib.h zconf.h
+                gzio.c zutil.h zlib.h zconf.h zlibdefs.h
 $   CALL MAKE infback.OBJ "CC ''CCOPT' infback" -
                 infback.c zutil.h inftrees.h inflate.h inffast.h inffixed.h
 $   CALL MAKE inffast.OBJ "CC ''CCOPT' inffast" -
-                inffast.c zutil.h zlib.h zconf.h inffast.h
+                inffast.c zutil.h zlib.h zconf.h zlibdefs.h inffast.h
 $   CALL MAKE inflate.OBJ "CC ''CCOPT' inflate" -
-                inflate.c zutil.h zlib.h zconf.h infblock.h
+                inflate.c zutil.h zlib.h zconf.h zlibdefs.h infblock.h
 $   CALL MAKE inftrees.OBJ "CC ''CCOPT' inftrees" -
-                inftrees.c zutil.h zlib.h zconf.h inftrees.h
+                inftrees.c zutil.h zlib.h zconf.h zlibdefs.h inftrees.h
 $   CALL MAKE trees.OBJ "CC ''CCOPT' trees" -
-                trees.c deflate.h zutil.h zlib.h zconf.h
+                trees.c deflate.h zutil.h zlib.h zconf.h zlibdefs.h
 $   CALL MAKE uncompr.OBJ "CC ''CCOPT' uncompr" -
-                uncompr.c zlib.h zconf.h
+                uncompr.c zlib.h zconf.h zlibdefs.h
 $   CALL MAKE zutil.OBJ "CC ''CCOPT' zutil" -
-                zutil.c zutil.h zlib.h zconf.h
+                zutil.c zutil.h zlib.h zconf.h zlibdefs.h
 $   write sys$output "Building Zlib ..."
 $   CALL MAKE libz.OLB "lib/crea libz.olb *.obj" *.OBJ
 $   write sys$output "Building example..."
 $   CALL MAKE example.OBJ "CC ''CCOPT' example" -
-                example.c zlib.h zconf.h
+                example.c zlib.h zconf.h zlibdefs.h
 $   call make example.exe "LINK example,libz.olb/lib" example.obj libz.olb
 $   if f$search("x11vms:xvmsutils.olb") .nes. ""
 $   then
 $     write sys$output "Building minigzip..."
 $     CALL MAKE minigzip.OBJ "CC ''CCOPT' minigzip" -
-                minigzip.c zlib.h zconf.h
+                minigzip.c zlib.h zconf.h zlibdefs.h
 $     call make minigzip.exe -
                 "LINK minigzip,libz.olb/lib,x11vms:xvmsutils.olb/lib" -
                 minigzip.obj libz.olb
 $   endif
 $  else
 $   gosub crea_mms
-$   SAY "Make ''name' ''version' with ''Make' "
+$   write sys$output "Make ''name' ''version' with ''Make' "
 $   'make'
 $  endif
 $!
@@ -133,6 +143,7 @@ $ write sys$output "C compiler required to build ''name'"
 $ goto err_exit
 $ERR_EXIT:
 $ set message/facil/ident/sever/text
+$ close/nolog optf
 $ write sys$output "Exiting..."
 $ exit 2
 $!
@@ -244,6 +255,9 @@ $!------------------------------------------------------------------------------
 $!
 $! Look for the compiler used
 $!
+$! Version history
+$! 0.01 20040223 First version to receive a number
+$! 0.02 20040229 Save/set value of decc$no_rooted_search_lists
 $CHECK_COMPILER:
 $ if (.not. (its_decc .or. its_vaxc .or. its_gnuc))
 $ then
@@ -257,9 +271,20 @@ $!
 $ if (.not. (its_decc .or. its_vaxc .or. its_gnuc))
 $ then goto CC_ERR
 $ else
-$   if its_decc then write sys$output "CC compiler check ... Compaq C"
-$   if its_vaxc then write sys$output "CC compiler check ... VAX C"
-$   if its_gnuc then write sys$output "CC compiler check ... GNU C"
+$   if its_decc
+$   then
+$     write sys$output "CC compiler check ... Compaq C"
+$     if f$trnlnm("decc$no_rooted_search_lists") .nes. ""
+$     then
+$       dnrsl = f$trnlnm("decc$no_rooted_search_lists")
+$     endif
+$     define decc$no_rooted_search_lists 1
+$   else
+$     if its_vaxc then write sys$output "CC compiler check ... VAX C"
+$     if its_gnuc then write sys$output "CC compiler check ... GNU C"
+$     if f$trnlnm(topt) then write topt "sys$share:vaxcrtl.exe/share"
+$     if f$trnlnm(optf) then write optf "sys$share:vaxcrtl.exe/share"
+$   endif
 $ endif
 $ return
 $!------------------------------------------------------------------------------
@@ -303,19 +328,19 @@ clean :
 
 
 # Other dependencies.
-adler32.obj  : adler32.c zutil.h zlib.h zconf.h
-compress.obj : compress.c zlib.h zconf.h
-crc32.obj    : crc32.c zutil.h zlib.h zconf.h
-deflate.obj  : deflate.c deflate.h zutil.h zlib.h zconf.h
-example.obj  : example.c zlib.h zconf.h
-gzio.obj     : gzio.c zutil.h zlib.h zconf.h
-inffast.obj  : inffast.c zutil.h zlib.h zconf.h inftrees.h inffast.h
-inflate.obj  : inflate.c zutil.h zlib.h zconf.h
-inftrees.obj : inftrees.c zutil.h zlib.h zconf.h inftrees.h
-minigzip.obj : minigzip.c zlib.h zconf.h
-trees.obj    : trees.c deflate.h zutil.h zlib.h zconf.h
-uncompr.obj  : uncompr.c zlib.h zconf.h
-zutil.obj    : zutil.c zutil.h zlib.h zconf.h
+adler32.obj  : adler32.c zutil.h zlib.h zconf.h zlibdefs.h
+compress.obj : compress.c zlib.h zconf.h zlibdefs.h
+crc32.obj    : crc32.c zutil.h zlib.h zconf.h zlibdefs.h
+deflate.obj  : deflate.c deflate.h zutil.h zlib.h zconf.h zlibdefs.h
+example.obj  : example.c zlib.h zconf.h zlibdefs.h
+gzio.obj     : gzio.c zutil.h zlib.h zconf.h zlibdefs.h
+inffast.obj  : inffast.c zutil.h zlib.h zconf.h zlibdefs.h inftrees.h inffast.h
+inflate.obj  : inflate.c zutil.h zlib.h zconf.h zlibdefs.h
+inftrees.obj : inftrees.c zutil.h zlib.h zconf.h zlibdefs.h inftrees.h
+minigzip.obj : minigzip.c zlib.h zconf.h zlibdefs.h
+trees.obj    : trees.c deflate.h zutil.h zlib.h zconf.h zlibdefs.h
+uncompr.obj  : uncompr.c zlib.h zconf.h zlibdefs.h
+zutil.obj    : zutil.c zutil.h zlib.h zconf.h zlibdefs.h
 infback.obj  : infback.c zutil.h inftrees.h inflate.h inffast.h inffixed.h
 $ eod
 $ close out
@@ -382,17 +407,23 @@ $ close h_in
 $ return
 $!------------------------------------------------------------------------------
 $!
-$! Analyze Object files for OpenVMS AXP to extract Procedure and Data
+$! Analyze Object files for OpenVMS AXP to extract Procedure and Data 
 $! information to build a symbol vector for a shareable image
 $! All the "brains" of this logic was suggested by Hartmut Becker
 $! (Hartmut.Becker@compaq.com). All the bugs were introduced by me
-$! (zinser@decus.de), so if you do have problem reports please do not
+$! (zinser@zinser.no-ip.info), so if you do have problem reports please do not
 $! bother Hartmut/HP, but get in touch with me
 $!
-$ ANAL_OBJ_AXP: Subroutine
+$! Version history
+$! 0.01 20040406 Skip over shareable images in option file
+$! 0.02 20041109 Fix option file for shareable images with case_sensitive=YES
+$! 0.03 20050107 Skip over Identification labels in option file
+$! 0.04 20060117 Add uppercase alias to code compiled with /name=as_is
+$!
+$ ANAL_OBJ_AXP: Subroutine   
 $ V = 'F$Verify(0)
 $ SAY := "WRITE_ SYS$OUTPUT"
-$
+$ 
 $ IF F$SEARCH("''P1'") .EQS. ""
 $ THEN
 $    SAY "ANAL_OBJ_AXP-E-NOSUCHFILE:  Error, inputfile ''p1' not available"
@@ -409,6 +440,17 @@ $ create a.tmp
 $ open/append atmp a.tmp
 $ loop:
 $ read/end=end_loop in line
+$ if f$locate("/SHARE",f$edit(line,"upcase")) .lt. f$length(line)
+$ then
+$   write sys$output "ANAL_SKP_SHR-i-skipshare, ''line'"
+$   goto loop
+$ endif
+$ if f$locate("IDENTIFICATION=",f$edit(line,"upcase")) .lt. f$length(line)
+$ then
+$   write sys$output "ANAL_OBJ_AXP-i-ident: Identification ", -
+                     f$element(1,"=",line)
+$   goto loop
+$ endif
 $ f= f$search(line)
 $ if f .eqs. ""
 $ then
@@ -450,12 +492,35 @@ $ edito/edt/command=sys$input f.tmp
 sub/symbol: "/symbol_vector=(/whole
 sub/"/=DATA)/whole
 exit
-$ sort/nodupl d.tmp,f.tmp 'p2'
-$ delete a.tmp;*,b.tmp;*,c.tmp;*,d.tmp;*,e.tmp;*,f.tmp;*
+$ sort/nodupl d.tmp,f.tmp g.tmp
+$ open/read raw_vector g.tmp
+$ open/write case_vector 'p2'
+$ RAWLOOP:
+$ read/end=end_rawloop raw_vector raw_element
+$ write case_vector raw_element
+$ if f$locate("=PROCEDURE)",raw_element) .lt. f$length(raw_element)
+$ then
+$     name = f$element(1,"=",raw_element) - "("
+$     if f$edit(name,"UPCASE") .nes. name then -
+          write case_vector f$fao(" symbol_vector=(!AS/!AS=PROCEDURE)", - 
+	                          f$edit(name,"UPCASE"), name) 
+$ endif
+$ if f$locate("=DATA)",raw_element) .lt. f$length(raw_element)
+$ then
+$     name = f$element(1,"=",raw_element) - "("
+$     if f$edit(name,"UPCASE") .nes. name then -
+          write case_vector f$fao(" symbol_vector=(!AS/!AS=DATA)", - 
+	                          f$edit(name,"UPCASE"), name) 
+$ endif
+$ goto rawloop
+$ END_RAWLOOP:
+$ close raw_vector
+$ close case_vector
+$ delete a.tmp;*,b.tmp;*,c.tmp;*,d.tmp;*,e.tmp;*,f.tmp;*,g.tmp;*
 $ if f$search("x.tmp") .nes. "" -
 	then $ delete x.tmp;*
 $!
 $ EXIT_AA:
 $ if V then set verify
-$ endsubroutine
+$ endsubroutine 
 $!------------------------------------------------------------------------------
