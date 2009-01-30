@@ -78,12 +78,12 @@ case "$cc" in
   *gcc*) gcc=1;;
 esac
 
+if test -z "$uname"; then
+  uname=`(uname -s || echo unknown) 2>/dev/null`
+fi
 if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
   CC="$cc"
   # All code is PIC on AIX.
-  if test -z $uname; then
-    uname=`(uname -s || echo unknown) 2>/dev/null`
-  fi
   case "$uname" in
   AIX*) SFLAGS=${CFLAGS-"-O3"}
         SHAREDLIB='libz.so';;
@@ -117,9 +117,6 @@ if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
 else
   # find system name and corresponding cc options
   CC=${CC-cc}
-  if test -z $uname; then
-    uname=`(uname -sr || echo unknown) 2>/dev/null`
-  fi
   case "$uname" in
   AIX*)      SFLAGS=${CFLAGS-"-O3"}
              case `(uname -m) 2>/dev/null` in
