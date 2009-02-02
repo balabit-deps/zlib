@@ -87,7 +87,7 @@ if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
   case "$uname" in
   AIX*) SFLAGS=${CFLAGS-"-O3"}
         SHAREDLIB='libz.so';;
-  *)    SFLAGS="${CFLAGS-"O3"} -fPIC";;
+  *)    SFLAGS="${CFLAGS-"-O3"} -fPIC";;
   esac
   CFLAGS="${CFLAGS-"-O3"}"
   case "$uname" in
