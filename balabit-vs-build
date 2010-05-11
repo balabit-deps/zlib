@@ -1,0 +1,109 @@
+#!/bin/sh -e
+
+ZWACONF=.zwaconf
+
+TARGET=
+
+if [ -f $ZWACONF ]; then
+  . $ZWACONF
+fi
+
+if [ -z "$TARGET" ]; then
+  TARGET=$PWD/out
+fi
+
+sed_file() {
+
+    while [ -n "$1" ]; do
+        in=$1.in
+        out=$1
+
+        sed \
+            -e "s,@TARGET@,${TARGET},g" \
+            -e "s/@VERSION@/${VERSION}/g" \
+            $in > $out
+        shift
+    done
+}
+
+cmd=$1
+
+shift
+case "$cmd" in
+  get-version)
+    get_version
+    ;;
+  prepare-dist)
+    VERSION=`get_version`
+    sed_file winbuild/build.bat
+    ;;
+  dist-exclude-list|build-exclude-list)
+    echo "out obj *.aqt *.ncb *.suo *.vcproj.*.user"
+    ;;
+  bootstrap)
+    ;;
+  configure)
+    OPTIONS=`getopt -l help,prefix: 'p:' $*`
+    if [ $? -ne 0 ]; then
+      echo "$0: unknown flags..."
+      exit 1
+    fi
+
+    eval set -- "$OPTIONS"
+    while true ; do
+      _arg=$1
+
+      if [ -z "$_arg" ]; then
+        break
+      fi
+      case $1 in
+        --prefix|-p)
+          shift
+          TARGET=`cygpath -u "$1"`
+          ;;
+      esac
+      shift
+    done
+    echo "TARGET=$TARGET" > $ZWACONF
+    ;;
+  make)
+    if [ "$ZBS_BUILDER_TYPE" = "win2" ]; then
+    # kill variables declared by unix make with contents incompatible by nmake.
+      unset MAKE
+      unset MAKEFLAGS
+      unset MAKEDIR
+    fi
+
+    if [ -z "$1" ]; then
+      nmake -nologo -f win32/Makefile.msc zlib1.la
+    else
+      case $1 in
+        clean)
+          nmake -nologo -f win32/Makefile.msc clean
+          rm -rf .libs
+          rm -f $ZWACONF
+          ;;
+        distclean)
+          $0 clean
+          rm -f debian/changelog winbuild/build.bat
+          ;;
+        install)
+          mkdir -p $TARGET/bin $TARGET/include $TARGET/lib
+          ccclibtool --mode=install install zlib1.la $TARGET/lib
+          for _h in zlibdefs.h zconf.h zlib.h; do
+            install $_h $TARGET/include
+          done
+          cp $TARGET/lib/zlib.lib $TARGET/lib/z.lib
+          cp $TARGET/lib/zlib1.la $TARGET/lib/libz.la
+          ;;
+      esac
+    fi
+    ;;
+  *)
+    echo "Unknown command: $cmd"
+    exit 1
+    ;;
+esac
+exit 0
+
+# vim: ts=2 sw=2 expandtab

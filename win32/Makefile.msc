@@ -12,19 +12,20 @@ LOC =
 
 
 # variables
-STATICLIB = zlib.lib
+STATICLIB = zlibs.lib
 SHAREDLIB = zlib1.dll
-IMPLIB    = zdll.lib
+SHAREDLA = zlib1.la
+IMPLIB    = zlib.lib
 
 CC = cl
 AS = ml
 LD = link
 AR = lib
 RC = rc
-CFLAGS  = -nologo -MD -O2 -Oy- $(LOC)
-WFLAGS  = -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE
+CFLAGS  = -nologo -MD -O2 /Zi -Oy- $(LOC) -DNO_FSEEKO
 ASFLAGS = -coff
-LDFLAGS = -nologo -debug -release
+WFLAGS  = -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE
+LDFLAGS = -nologo -release /debug  /MAPINFO:EXPORTS /MAP
 ARFLAGS = -nologo
 RCFLAGS = /dWIN32 /r
 
@@ -47,6 +48,9 @@ $(SHAREDLIB): win32/zlib.def $(OBJS) $(OBJA) zlib1.res
 	  -out:$@ $(OBJS) $(OBJA) zlib1.res
 	if exist $@.manifest \
 	  mt -nologo -manifest $@.manifest -outputresource:$@;2
+
+$(SHAREDLA): win32/zlib.def $(OBJS) $(OBJA) zlib1.res
+	sh -c "ccclibtool --mode=link cccl -shared -g -rpath / -export-symbols win32/zlib.def --implib $(IMPLIB) -o $@ $(OBJS) $(OBJA) zlib1.res"
 
 example.exe: example.obj $(STATICLIB)
 	$(LD) $(LDFLAGS) example.obj $(STATICLIB)
@@ -128,6 +132,10 @@ clean:
 	-del *.res
 	-del *.exp
 	-del *.exe
+	-del *.ilk
+	-del *.exp
 	-del *.pdb
+	-del *.map
 	-del *.manifest
 	-del foo.gz
+	-del *.la
