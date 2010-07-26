@@ -19,16 +19,13 @@ configure: $(STAMPDIR)/stamp-configure
 	touch $@
 
 $(STAMPDIR)/stamp-configure: setup
-
+ZLIBVERSION=1.2.3.3
 build:  $(STAMPDIR)/stamp-build
 $(STAMPDIR)/stamp-build: configure
 	$(MAKE)
 	if echo $(ZBS_DIST) | grep '^aix' >/dev/null 2>&1;then \
-		rm -f libz.so.1; \
-		cp libz.so.1.2.3 libz.so.1; \
-		/usr/bin/ar -q libz.a libz.so.1; \
-		rm -f libz.so.1; \
-		ln -s libz.so.1.2.3 libz.so.1; \
+		rm -f libz.a; \
+		/usr/bin/ar -X32 -q libz.a libz.so.$(ZLIBVERSION); \
 	fi
 
 	touch $@
@@ -39,6 +36,7 @@ $(STAMPDIR)/stamp-install: build
 	$(MAKE) install prefix=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX) libdir=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/lib includedir=$(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/include
 	if echo $(ZBS_DIST) | grep '^aix' >/dev/null 2>&1;then \
 		install -m644 libz.a $(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/lib; \
+		rm -f $(ZBS_STAGE_DIR)/$(ZBS_PREFIX)/lib/libz.so*; \
 	fi
 	touch $@
 
