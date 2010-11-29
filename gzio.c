@@ -233,12 +233,15 @@ local gzFile gz_open (path, mode, fd, use64)
 /* ===========================================================================
      Opens a gzip (.gz) file for reading or writing.
 */
+#if _FILE_OFFSET_BITS == 64
+#else
 gzFile ZEXPORT gzopen (path, mode)
     const char *path;
     const char *mode;
 {
     return gz_open (path, mode, -1, 0);
 }
+#endif
 
 /* ===========================================================================
      Opens a gzip (.gz) file for reading or writing for 64-bit offsets
@@ -906,6 +909,8 @@ local z_off_t gz_seek (file, offset, whence, use64)
 /* ===========================================================================
     Define external functions gzseek() and gzseek64() using local gz_seek().
 */
+#if _FILE_OFFSET_BITS == 64
+#else
 z_off_t ZEXPORT gzseek (file, offset, whence)
     gzFile file;
     z_off_t offset;
@@ -913,6 +918,7 @@ z_off_t ZEXPORT gzseek (file, offset, whence)
 {
     return (z_off_t)gz_seek(file, offset, whence, 0);
 }
+#endif
 
 #ifdef _LARGEFILE64_SOURCE
 off64_t ZEXPORT gzseek64 (file, offset, whence)
@@ -959,11 +965,14 @@ int ZEXPORT gzrewind (file)
    given compressed file. This position represents a number of bytes in the
    uncompressed data stream.
 */
+#if _FILE_OFFSET_BITS == 64
+#else
 z_off_t ZEXPORT gztell (file)
     gzFile file;
 {
     return gzseek(file, 0L, SEEK_CUR);
 }
+#endif
 
 /* ===========================================================================
      64-bit version
