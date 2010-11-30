@@ -1,3 +1,9 @@
+zlib (1.2.3.3-1.syslog-ng40.1) syslogngdeps20; urgency=low
+
+  * Added sparc64 support.
+
+ -- Tamas Pal <folti@balabit.com>  Tue, 30 Nov 2010 13:42:33 +0100
+
 zlib (1.2.3.3-1.syslog-ng30) syslogng30; urgency=low
 
   * New upstream release 1.2.3.3.
