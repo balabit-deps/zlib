@@ -8,19 +8,21 @@ all: binary
 
 binary: clean setup configure build install
 
-ifneq (,$(findstring $(ZBS_ARCH), sparc64))
-	CFLAGS=-m64
-else
-	CFLAGS=
+CC=gcc
+ifneq (,$(findstring sparc64,$(ZBS_ARCH)))
+	LDSHARED=$(CC) $(LDFLAGS) -shared
 endif
+
 setup:  $(STAMPDIR)/stamp-setup
 $(STAMPDIR)/stamp-setup:
 	mkdir -p tgz2build/stamps 
 	touch $@
 
 configure: $(STAMPDIR)/stamp-configure
-	unset CFLAGS; \
-	CFLAGS=$(CFLAGS); export CFLAGS; \
+	if [ -n "$(LDSHARED)" ]; then \
+		LDSHARED="$(LDSHARED)";\
+		export LDSHARED; \
+	fi; \
 	$(CONFIGURE_CMD) $(CONFIGURE_OPTS)
 	touch $@
 
