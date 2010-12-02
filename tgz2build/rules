@@ -9,8 +9,14 @@ all: binary
 binary: clean setup configure build install
 
 CC=gcc
+
+ifneq (,$(findstring solaris,$(ZBS_DIST)))
 ifneq (,$(findstring sparc64,$(ZBS_ARCH)))
 	LDSHARED=$(CC) $(LDFLAGS) -shared
+endif
+ifneq (,$(findstring amd64,$(ZBS_ARCH)))
+	LDSHARED=$(CC) $(LDFLAGS) -shared
+endif
 endif
 
 setup:  $(STAMPDIR)/stamp-setup
