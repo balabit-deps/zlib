@@ -8,7 +8,9 @@ all: binary
 
 binary: clean setup configure build install
 
-CC=gcc
+ifeq (,$(CC))
+CC:=gcc
+endif
 
 ifneq (,$(findstring solaris,$(ZBS_DIST)))
 ifneq (,$(findstring sparc64,$(ZBS_ARCH)))
