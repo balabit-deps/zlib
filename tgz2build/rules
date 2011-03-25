@@ -12,6 +12,10 @@ ifeq (,$(CC))
 CC:=gcc
 endif
 
+ifneq (,$(findstring freebsd,$(ZBS_DIST)))
+	LDSHARED=$(CC) $(LDFLAGS) -shared -Wl,-rpath,/opt/syslog-ng/lib
+endif
+
 ifneq (,$(findstring solaris,$(ZBS_DIST)))
 # because sunfreeware's GNU make has CC set to cc by default ...
 CC=gcc
