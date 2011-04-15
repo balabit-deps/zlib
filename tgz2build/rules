@@ -4,10 +4,6 @@ STAMPDIR=tgz2build/stamps
 CONFIGURE_OPTS := --prefix $(ZBS_PREFIX) --shared
 CONFIGURE_CMD = ./configure
 
-all: binary
-
-binary: clean setup configure build install
-
 ifeq (,$(CC))
 CC:=gcc
 endif
@@ -26,6 +22,10 @@ ifneq (,$(findstring amd64,$(ZBS_ARCH)))
 	LDSHARED=$(CC) $(LDFLAGS) -shared
 endif
 endif
+
+all: binary
+
+binary: clean setup configure build install
 
 setup:  $(STAMPDIR)/stamp-setup
 $(STAMPDIR)/stamp-setup:
