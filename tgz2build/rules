@@ -15,12 +15,7 @@ endif
 ifneq (,$(findstring solaris,$(ZBS_DIST)))
 # because sunfreeware's GNU make has CC set to cc by default ...
 CC=gcc
-ifneq (,$(findstring sparc64,$(ZBS_ARCH)))
-	LDSHARED=$(CC) $(LDFLAGS) -shared
-endif
-ifneq (,$(findstring amd64,$(ZBS_ARCH)))
-	LDSHARED=$(CC) $(LDFLAGS) -shared
-endif
+LDSHARED=$(CC) $(LDFLAGS) -shared -Wl,-R/opt/syslog-ng/lib
 endif
 
 all: binary
