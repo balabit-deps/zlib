@@ -21,6 +21,7 @@ endif
 ifneq (,$(findstring amd64,$(ZBS_ARCH)))
 	LDSHARED=$(CC) $(LDFLAGS) -shared
 endif
+LDSHARED += -Wl,-R/opt/syslog-ng/lib
 endif
 
 all: binary
