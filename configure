@@ -111,7 +111,8 @@ if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
              SHAREDLIB=libz$shared_ext
              SHAREDLIBV=libz.$VER$shared_ext
              SHAREDLIBM=libz.$VER1$shared_ext
-             LDSHARED=${LDSHARED-"$cc -dynamiclib -install_name $libdir/$SHAREDLIBM -compatibility_version $VER1 -current_version $VER"};;
+             CVER=`echo $VER | cut -f1-3 -d'.'`
+             LDSHARED=${LDSHARED-"$cc -dynamiclib -install_name $libdir/$SHAREDLIBM -compatibility_version $VER1 -current_version $CVER"};;
   *)             LDSHARED=${LDSHARED-"$cc -shared"};;
   esac
 else
@@ -202,6 +203,9 @@ SHAREDLIBM=${SHAREDLIBM-"libz$shared_ext.$VER1"}
 if test $shared -eq 1; then
   echo Checking for shared library support...
   # we must test in two steps (cc then ld), required at least on SunOS 4.x
+  cat $test.c
+  ($CC -c $SFLAGS $test.c)
+  ($LDSHARED -o $test$shared_ext $test.o) 2>&1
   if test "`($CC -c $SFLAGS $test.c) 2>&1`" = "" &&
      test "`($LDSHARED -o $test$shared_ext $test.o) 2>&1`" = ""; then
     LIBS="$LIBS $SHAREDLIBV"
