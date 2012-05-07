@@ -8,8 +8,31 @@ case "$cmd" in
   bootstrap)
     ;;
   configure)
+    OPTIONS=`getopt -l help,prefix: 'p:' $*`
+    if [ $? -ne 0 ]; then
+      echo "$0: unknown flags..."
+      exit 1
+    fi
+
+    eval set -- "$OPTIONS"
+    while true ; do
+      _arg=$1
+
+      if [ -z "$_arg" ]; then
+        break
+      fi
+      case $1 in
+        --prefix|-p)
+          shift
+          TARGET="$1"
+          ;;
+      esac
+      shift
+    done
+    ./configure  --prefix "$TARGET" $OPTS $@
     ;;
   make)
+				make $@
     ;;
   *)
     echo "Unknown command: $cmd"

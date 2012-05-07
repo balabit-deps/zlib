@@ -2,7 +2,11 @@
 STAMPDIR=winbuild/stamps
 STAGINGDIR=winbuild/staging
 
+ifneq (,$(findstring mingw,$(ZBS_BUILDER_TYPE)))
+BUILDCMD=./balabit-unix-build
+else
 BUILDCMD=./balabit-vs-build
+endif
 
 all: binary
 
@@ -33,6 +37,6 @@ $(STAMPDIR)/stamp-install: build
 clean:
 	rm -rf $(STAMPDIR) || true
 	rm -rf $(STAGINGDIR) || true
-	$(MAKE) clean
+	-$(MAKE) clean
 
 .PHONY: build clean binary-indep binary-arch binary install

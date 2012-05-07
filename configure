@@ -19,6 +19,10 @@
 # an error.
 
 LIBS=libz.a
+STATICLIB=libz.a
+LDCONFIG=${LDCONFIG-"ldconfig"}
+IMPORTLIB=
+LDSHAREDLIBC="${LDSHAREDLIBC--lc}"
 LDFLAGS="-L. ${LIBS}"
 VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < zlib.h`
 VER2=`sed -n -e '/VERSION "/s/.*"\([0-9]*\\.[0-9]*\)\\..*/\1/p' < zlib.h`
@@ -29,6 +33,7 @@ RANLIB=${RANLIB-"ranlib"}
 prefix=${prefix-/usr/local}
 exec_prefix=${exec_prefix-'${prefix}'}
 libdir=${libdir-'${exec_prefix}/lib'}
+sharedlibdir=${sharedlibdir-'${libdir}'}
 includedir=${includedir-'${prefix}/include'}
 mandir=${mandir-'${prefix}/share/man'}
 shared_ext='.so'
@@ -37,6 +42,7 @@ zprefix=0
 gcc=0
 old_cc="$CC"
 old_cflags="$CFLAGS"
+old_ldflags="$LDFLAGS"
 
 while test $# -ge 1
 do
@@ -50,6 +56,7 @@ case "$1" in
     -e*=* | --eprefix=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -l*=* | --libdir=*) libdir=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -i*=* | --includedir=*) includedir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
+    --sharedlibdir=*) sharedlibdir=`echo $1 | sed 's/.*=//'`; shift ;;
     -u*=* | --uname=*) uname=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -p* | --prefix) prefix="$2"; shift; shift;;
     -e* | --eprefix) exec_prefix="$2"; shift; shift;;
@@ -93,6 +100,33 @@ if test "$gcc" -eq 1 && ($cc -c $cflags $test.c) 2>/dev/null; then
   case "$uname" in
   Linux | linux | GNU | GNU/*) LDSHARED=${LDSHARED-"$cc -shared -Wl,-soname,libz.so.1,--version-script,zlib.map"};;
   CYGWIN* | Cygwin* | cygwin* | OS/2* )
+   	CFLAGS="${CFLAGS} -D_LARGEFILE_SOURCE=1 -D_FILE_OFFSET_BITS=64"
+   	SFLAGS="${CFLAGS}"
+ 	LDFLAGS="-L. -lz ${old_ldflags}"
+ 	shared_ext='.dll'
+ 	SHAREDLIB='cygz.dll'
+ 	IMPORTLIB='libz.dll.a'
+ 	LDSHARED=${LDSHARED-"$cc -shared -Wl,-export-all -Wl,--enable-auto-image-base -Wl,--out-implib=${IMPORTLIB}"}
+ 	LDSHAREDLIBC=''
+         EXE='.exe' ;;
+   MSYS* | MSys* | msys* )
+   	SFLAGS="${CFLAGS}"
+ 	LDFLAGS="-L. -lz ${old_ldflags}"
+ 	shared_ext='.dll'
+ 	SHAREDLIB='msys-z.dll'
+ 	IMPORTLIB='libz.dll.a'
+ 	LDSHARED=${LDSHARED-"$cc -shared -Wl,-export-all -Wl,--enable-auto-image-base -Wl,--out-implib=${IMPORTLIB}"}
+ 	LDSHAREDLIBC=''
+          EXE='.exe' ;;
+    MINGW*|mingw*)
+   	SFLAGS="${CFLAGS}"
+ 	LDFLAGS="-L. -lz ${old_ldflags}"
+ 	shared_ext='.dll'
+ 	SHAREDLIB='libz-1.dll'
+ 	IMPORTLIB='libz.dll.a'
+ 	LDSHARED=${LDSHARED-"$cc -shared -Wl,-export-all -Wl,--enable-auto-image-base -Wl,--out-implib=${IMPORTLIB}"}
+ 	LDSHAREDLIBC=''
+	sharedlibdir=${prefix}/bin
              EXE='.exe';;
   QNX*)  # This is for QNX6. I suppose that the QNX rule below is for QNX2,QNX4
          # (alain.bonnefoy@icbt.com)
@@ -196,9 +230,38 @@ else
   esac
 fi
 
+case "$uname" in
+  *CYGWIN* | *Cygwin* | *cygwin* )
+    # On cygwin, we always build both shared and static libs
+    ALL="static shared"
+    SHAREDLIBPOST='/bin/true'
+    SHAREDTARGET=${SHAREDLIB}
+    TEST="all teststatic testshared"
+    ;;
+  *MSYS* | *MSys* | *msys* )
+    # On msys, we always build both shared and static libs
+    ALL="static shared"
+    SHAREDLIBPOST='/bin/true'
+    SHAREDTARGET=${SHAREDLIB}
+    TEST="all teststatic testshared"
+    ;;
+  *MINGW* | *Mingw* | *mingw* )
+    # On Mingw, we always build both shared and static libs
+    ALL="static shared"
+    SHAREDLIBPOST='/bin/true'
+    TEST="all teststatic testshared"
+    SHAREDTARGET=${SHAREDLIB}
+    SHAREDLIBV=${SHAREDLIBV-"libz$shared_ext.$VER"}
+    SHAREDLIBM=${SHAREDLIBM-"libz$shared_ext.$VER1"}
+    LIBS="$LIBS $SHAREDTARGET"
+    ;;
+  *)
+
 SHAREDLIB=${SHAREDLIB-"libz$shared_ext"}
 SHAREDLIBV=${SHAREDLIBV-"libz$shared_ext.$VER"}
 SHAREDLIBM=${SHAREDLIBM-"libz$shared_ext.$VER1"}
+SHAREDLIBPOST='(rm -f $(SHAREDLIB) $(SHAREDLIBM); ln -s $@ $(SHAREDLIB) ; ln -s $@ $(SHAREDLIBM) )'
+SHAREDTARGET='$(SHAREDLIBV)'
 
 if test $shared -eq 1; then
   echo Checking for shared library support...
@@ -231,6 +294,8 @@ else
   ALL="allstatic allshared"
   TEST="teststatic testshared"
 fi
+  ;;
+esac
 
 cat > zlibdefs.h << EOF
 /* zlibdefs.h -- compile-time definitions for the zlib compression library
@@ -248,7 +313,6 @@ if test "`($CC -c $CFLAGS -D_LARGEFILE64_SOURCE=1 $test.c) 2>&1`" = ""; then
   CFLAGS="${CFLAGS} -D_LARGEFILE64_SOURCE=1"
   SFLAGS="${SFLAGS} -D_LARGEFILE64_SOURCE=1"
   echo "Checking for off64_t... Yes."
-  echo "Checking for fseeko... Yes."
 else
   echo "Checking for off64_t... No."
   cat > $test.c <<EOF
@@ -258,13 +322,14 @@ int main(void) {
   return 0;
 }
 EOF
-  if test "`($CC $CFLAGS -o $test $test.c) 2>&1`" = ""; then
+fi
+
+if test "`($CC $CFLAGS -o $test $test.c) 2>&1`" = ""; then
     echo "Checking for fseeko... Yes."
-  else
+else
     CFLAGS="${CFLAGS} -DNO_FSEEKO"
     SFLAGS="${SFLAGS} -DNO_FSEEKO"
     echo "Checking for fseeko... No."
-  fi
 fi
 
 cat > $test.c <<EOF
@@ -526,7 +591,7 @@ case $CFLAGS in
 esac
 
 rm -f $test.[co] $test $test$shared_ext
-
+set -x
 # udpate Makefile
 sed < Makefile.in "
 /^CC *=/s#=.*#=$CC#
@@ -539,12 +604,18 @@ sed < Makefile.in "
 /^SHAREDLIB *=/s#=.*#=$SHAREDLIB#
 /^SHAREDLIBV *=/s#=.*#=$SHAREDLIBV#
 /^SHAREDLIBM *=/s#=.*#=$SHAREDLIBM#
+/^IMPORTLIB *=/s#=.*#=$IMPORTLIB#
+/^SHAREDLIBPOST *=/s#=.*#=$SHAREDLIBPOST#
+/^SHAREDTARGET *=/s#=.*#=$SHAREDTARGET#
 /^AR *=/s#=.*#=$AR_RC#
 /^RANLIB *=/s#=.*#=$RANLIB#
+/^LDCONFIG *=/s#=.*#=$LDCONFIG#
+/^LDSHAREDLIBC *=/s#=.*#=$LDSHAREDLIBC#
 /^EXE *=/s#=.*#=$EXE#
 /^prefix *=/s#=.*#=$prefix#
 /^exec_prefix *=/s#=.*#=$exec_prefix#
 /^libdir *=/s#=.*#=$libdir#
+/^sharedlibdir *=/s#=.*#=$sharedlibdir#
 /^includedir *=/s#=.*#=$includedir#
 /^mandir *=/s#=.*#=$mandir#
 /^all: */s#:.*#: $ALL#
@@ -566,6 +637,7 @@ sed < zlib.pc.in "
 /^prefix *=/s#=.*#=$prefix#
 /^exec_prefix *=/s#=.*#=$exec_prefix#
 /^libdir *=/s#=.*#=$libdir#
+/^sharedlibdir *=/s#=.*#=$sharedlibdir#
 /^includedir *=/s#=.*#=$includedir#
 /^mandir *=/s#=.*#=$mandir#
 /^LDFLAGS *=/s#=.*#=$LDFLAGS#
