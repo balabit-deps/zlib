@@ -26,9 +26,14 @@ case "$cmd" in
           shift
           TARGET="$1"
           ;;
+        --)
+          shift
+          break
+          ;;
       esac
       shift
     done
+    set -x
     ./configure  --prefix "$TARGET" $OPTS $@
     ;;
   make)

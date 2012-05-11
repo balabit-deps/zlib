@@ -591,7 +591,7 @@ case $CFLAGS in
 esac
 
 rm -f $test.[co] $test $test$shared_ext
-set -x
+#set -x
 # udpate Makefile
 sed < Makefile.in "
 /^CC *=/s#=.*#=$CC#
