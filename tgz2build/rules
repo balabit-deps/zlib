@@ -33,7 +33,7 @@ configure: $(STAMPDIR)/stamp-configure
 		LDSHARED="$(LDSHARED)";\
 		export LDSHARED; \
 	fi; \
-	$(CONFIGURE_CMD) $(CONFIGURE_OPTS)
+	CFLAGS="$(CFLAGS) -O3" $(CONFIGURE_CMD) $(CONFIGURE_OPTS)
 	touch $@
 
 $(STAMPDIR)/stamp-configure: setup
