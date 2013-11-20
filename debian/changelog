@@ -2,7 +2,7 @@ zlib (1.2.3.3-1.syslog-ng50.2) syslogngdeps50; urgency=low
 
   * add -O3 optimalization flag
 
- --  Viktor Juhasz <jviktor@balabit.com>  Wed, 4 Sep 2013 117:26:21 +0200
+ --  Viktor Juhasz <jviktor@balabit.com>  Wed, 4 Sep 2013 17:26:21 +0200
 
 zlib (1.2.3.3-1.syslog-ng50.1) syslogngdeps50; urgency=low
 
