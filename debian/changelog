@@ -1,3 +1,9 @@
+zlib (1.2.3.3-1.syslog-ng51.1) syslogngdeps51; urgency=low
+
+  * release for syslog-ng-5.1
+
+ -- Laszlo Budai <lbudai@balabit.com>  Mon, 03 Mar 2014 11:18:45 +0100
+
 zlib (1.2.3.3-1.syslog-ng50.2) syslogngdeps50; urgency=low
 
   * add -O3 optimalization flag
