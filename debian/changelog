@@ -1,3 +1,9 @@
+zlib (1.2.3.3-1.syslog-ng52.1) syslogng52; urgency=low
+
+  * release for syslog-ng-5.2
+
+ -- jviktor <jviktor@devel-57>  Thu, 05 Jun 2014 11:16:09 +0200
+
 zlib (1.2.3.3-1.syslog-ng51.1) syslogngdeps51; urgency=low
 
   * release for syslog-ng-5.1
