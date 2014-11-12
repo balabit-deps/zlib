@@ -14,5 +14,6 @@ autom4te.cache
 gtk-doc.make
 typescript
 *.new
-b
-smake/*.pyc
+sbuild/*.pyc
+sbuild/build
+sbuild.py
