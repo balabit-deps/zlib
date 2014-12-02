@@ -1,1 +1,1 @@
-default_opts="--prefix /home/jviktor/work/syslog-ng-project/install"
+default_opts="--shared"
