@@ -1,3 +1,9 @@
+zlib (1.2.3.3-1.syslogng70.1) syslogng70; urgency=low
+
+  * release for syslog-ng-7.0
+
+ -- Antal Nemes <antal.nemes@balabit.com>  Tue, 03 Jul 2018 15:45:10 +0200
+
 zlib (1.2.3.3-1.syslogng60.1) syslogng60; urgency=low
 
   * release for syslog-ng-6.0
