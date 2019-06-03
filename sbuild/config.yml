@@ -2,7 +2,7 @@ name: zlib
 builder:
   name: BalabitBuilder
   configure_options: "--shared"
-  flags: "no-make-dist"
+  flags: "no-make-dist out-of-tree-build-incompatible"
 platforms:
   - aix-6.1/powerpc
   - hpux-11v2/ia64
