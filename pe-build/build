@@ -1,0 +1,12 @@
+source="zlib"
+version=1.2.3.3-pe-1
+
+build() {
+  # zlib doesn't support out-of-tree build
+  ./configure --prefix="${prefix}" --shared
+  make
+}
+
+install() {
+  make DESTDIR="${dest_dir}" install
+}
